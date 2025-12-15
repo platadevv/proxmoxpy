@@ -3,6 +3,7 @@
 from proxmoxer import ProxmoxAPI
 import getpass
 import sys
+import re
 import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -50,7 +51,25 @@ proxmox = ProxmoxAPI(
 )
 
 # ===== CREACIÓN DE USUARIOS =====
-for i in range(1, cantidad + 1):
+def obtener_siguiente_numero_usuario(proxmox, prefijo, realm):
+    usuarios = proxmox.access.users.get()
+    max_num = 0
+
+    patron = re.compile(rf"^{prefijo}(\d+)@{realm}$")
+
+    for u in usuarios:
+        userid = u["userid"]
+        match = patron.match(userid)
+        if match:
+            num = int(match.group(1))
+            if num > max_num:
+                max_num = num
+
+    return max_num + 1
+
+inicio = obtener_siguiente_numero_usuario(proxmox, prefijo, PROXMOX_REALM)
+
+for i in range(inicio, inicio + cantidad):
     username = f"{prefijo}{i}@{PROXMOX_REALM}"
     user_pass = f"{prefijo}{i}123"
 
